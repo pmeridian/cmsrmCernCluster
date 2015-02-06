@@ -11,7 +11,7 @@ scp -r root@pccmsrm30:.ssh /root
 /usr/sbin/lcm --configure krb5clt sendmail ntpd chkconfig ocsagent ssh t
 /usr/sbin/lcm --list
 /usr/sbin/cern-config-users --setup-all
-for user in `cat /afs/cern.ch/user/m/meridian/public/cmsrm_users`; do /usr/sbin/addusercern $user; done
+for user in `cat /afs/cern.ch/user/m/meridian/public/www/cmsrmCernCluster`; do /usr/sbin/addusercern $user; done
 scp pccmsrm30:/etc/auto.master  /etc/auto.master
 scp pccmsrm30:/etc/auto.master  /etc/auto.master
 scp pccmsrm30:/etc/auto.cmsrm  /etc/auto.cmsrm
