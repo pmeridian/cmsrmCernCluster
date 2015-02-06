@@ -1,0 +1,132 @@
+########################
+# Basic config
+########################
+scp -r root@pccmsrm30:.ssh /root
+/usr/sbin/lcm --configure ntpd afsclt
+/sbin/chkconfig --add afs
+/sbin/service afs start
+/sbin/chkconfig --add yum-autoupdate
+/sbin/service yum-autoupdate start
+/usr/sbin/lcm --configure srvtab 
+/usr/sbin/lcm --configure krb5clt sendmail ntpd chkconfig ocsagent ssh t
+/usr/sbin/lcm --list
+/usr/sbin/cern-config-users --setup-all
+for user in `cat /afs/cern.ch/user/m/meridian/public/cmsrm_users`; do /usr/sbin/addusercern $user; done
+scp pccmsrm30:/etc/auto.master  /etc/auto.master
+scp pccmsrm30:/etc/auto.master  /etc/auto.master
+scp pccmsrm30:/etc/auto.cmsrm  /etc/auto.cmsrm
+mkdir /cmsrm
+/sbin/chkconfig --levels 35 autofs on
+/sbin/chkconfig --levels 35 nfs on
+scp pccmsrm30:/etc/exports  /etc/exports
+/etc/init.d/portmap restart
+/etc/init.d/nfs restart
+/etc/init.d/autofs restart
+yum install -y castor-rfio-client.x86_64
+########################
+# HepLibs
+########################
+cd /etc/yum.repos.d/
+wget http://grid-deployment.web.cern.ch/grid-deployment/download/HEP/repo/HEP_OSlibs.repo
+yum install -y HEP_OSlibs_SL6.x86_64
+yum -y install glibc-devel
+yum -y install zlib-devel
+yum -y install acroread
+########################
+# Condor Worker Node
+########################
+wget http://www.cs.wisc.edu/condor/yum/repo.d/condor-stable-rhel6.repo
+mv condor-stable-rhel6.repo /etc/yum.repos.d/
+yum -y install yum-downloadonly
+yum -y install condor.x86_64
+scp pccmsrm30:/etc/sysconfig/iptables  /etc/sysconfig/iptables
+/etc/init.d/iptables restart
+cd /etc/condor
+rm -rf *
+scp "pccmsrm30:/etc/condor/*" ./
+mv condor_config.pccmsrm30 condor_config.`echo $HOSTNAME | awk -F '.' '{print $1}'`
+condor_store_cred -c add
+/sbin/chkconfig --levels 35 condor on
+service condor start
+########################
+# XROOTD 
+########################
+yum -y install fuse fuse-libs
+yum -y install xrootd-fuse.x86_64
+yum -y install yum-priorities    
+rpm -Uvh http://repo.grid.iu.edu/osg/3.1/osg-3.1-el6-release-latest.rpm 
+yum -y install xrootd.x86_64 
+scp pccmsrm26:/etc/xrootd/xrootd-clustered.cfg /etc/xrootd/xrootd-clustered.cfg
+scp pccmsrm26:/etc/xrootd/auth_file /etc/xrootd/auth_file
+scp pccmsrm27:/etc/xrootd/xrootd.key /etc/xrootd/xrootd.key
+chown xrootd.xrootd /etc/xrootd/xrootd-clustered.cfg
+chown xrootd.xrootd /etc/xrootd/auth_file
+chown xrootd.xrootd /etc/xrootd/xrootd.key
+service xrootd setup
+service xrootd start
+echo "xrootdfs                /xrootdfs/cms           fuse    rdr=xroot://pccmsrm27.cern.ch:1094//cms,uid=xrootd,sss=/etc/xrootd/xrootd.key  0 0" >> /etc/fstab
+mkdir -p /xrootdfs/cms
+mount /xrootdfs/cms/
+###########################
+# Vidyo
+###########################
+yum -y install VidyoDesktop
+###########################
+# GKrellM
+###########################
+yum -y install gkrellm
+###########################
+# Skype
+###########################
+yum -y install qtwebkit.i686 libgnomeui-2.24.1-4.el6.i686 libXScrnSaver.i686 qt.i686 qt-x11.i686 gtk2-engines.i686
+scp pccmsrm26:/root/skype-4.3.0.37.tar.bz2 /root
+mkdir -p /opt
+cd /opt
+tar xvjf /root/skype-4.3.0.37.tar.bz2
+ln -s /opt/skype-4.3.0.37/ /opt/skype
+ln -s /opt/skype/skype /usr/bin/skype
+########################
+# FreeNX
+########################
+yum -y install nx
+yum -y install nxagent
+yum -y install nxauth
+yum -y install nxproxy
+yum -y install xorg-x11-apps xorg-x11-fonts-misc
+yum -y groupinstall Xfce
+rpm -ivh http://vault.centos.org/6.2/extras/x86_64/Packages/freenx-0.7.3-9.el6.centos.x86_64.rpm
+rehash
+nxsetup --install
+/etc/init.d/freenx-server stop
+/etc/init.d/freenx-server start
+############################
+# UI 
+###########################
+cat > /etc/yum.repos.d/egi.repo << EOF
+[EGI-trustanchors]
+name=EGI-trustanchors
+baseurl=http://repository.egi.eu/sw/production/cas/1/current/
+gpgkey=http://repository.egi.eu/sw/production/cas/1/GPG-KEY-EUGridPMA-RPM-3
+gpgcheck=1
+enabled=1
+EOF
+wget http://emisoft.web.cern.ch/emisoft/dist/EMI/3/sl6/x86_64/base/emi-release-3.0.0-2.el6.noarch.rpm
+yum -y localinstall emi-release-3.0.0-2.el6.noarch.rpm
+yum -y clean metadata
+rpm -e castor-rfio-client-2.1.14-15.slc6.x86_64
+yum -y install yum-priorities yum-protectbase
+yum -y install emi-ui
+cd /root
+wget http://hep.ph.liv.ac.uk/VomsSnooper/UI_glitecfg.tar
+tar -xvf UI_glitecfg.tar
+/opt/glite/yaim/bin/yaim -c -s /root/glitecfg/site-info.def -n UI
+###########################
+# CVMFS2
+###########################
+yum -y install osg-oasis
+#rpm -Uvh http://repo.grid.iu.edu/osg/3.2/osg-3.2-el6-release-latest.rpm
+echo "user_allow_other" >> /etc/fuse.conf
+echo "/cvmfs  program:/etc/auto.cvmfs" >> /etc/auto.master
+scp -r pccmsrm30:/etc/cvmfs /etc/
+cvmfs_config chksetup
+service autofs restart

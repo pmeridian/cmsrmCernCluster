@@ -1,0 +1,172 @@
+##  40-1-B24: slc5: 16 17 27
+##  32-4-C03: slc5: 20 22 23(da reinstallare)  slc4: 21
+#
+### per tutte le informazioni vedere le istruzioni a
+### http://linux.web.cern.ch/linux/scientific5/docs/install.shtml
+#
+##########################################
+# Installazione utenti standard CMS Roma
+##########################################
+scp -r pccmsrm27:.ssh ./
+scp pccmsrm27:/etc/passwd /etc/passwd
+scp pccmsrm27:/etc/group /etc/group
+scp pccmsrm27:/etc/shadow /etc/shadow
+
+## per nuovi utenti non che non ci sono sul pc27
+/usr/sbin/addusercern <loginid>
+
+## autofs per dischi da condividere
+scp pccmsrm27:/etc/auto.master  /etc/auto.master
+scp pccmsrm27:/etc/auto.cmsrm  /etc/auto.cmsrm
+mkdir /cmsrm
+/sbin/chkconfig --levels 35 autofs on
+/sbin/chkconfig --levels 35 nfs on
+
+scp pccmsrm27:/etc/exports  /etc/exports
+/etc/init.d/portmap restart
+/etc/init.d/nfs restart
+/etc/init.d/autofs restart
+
+scp pccmsrm27:/etc/sysconfig/iptables  /etc/sysconfig/iptables
+/etc/init.d/iptables restart
+
+/usr/sbin/lcm --configure srvtab
+/usr/sbin/lcm --configure krb4clt krb5clt sendmail zephyrclt pine
+######################################################################
+###Se presente una scheda grafica ATI scommentare la parte successiva
+######################################################################
+#yum install kernel-module-fglrx-`uname -r` ati-fglrx
+#/usr/bin/X11/aticonfig --initial
+
+######################################################################
+###  per scehde nVidia C51G GeForce 6100   pcrm16
+######################################################################
+cd /root
+scp pccmsrm16.cern.ch:NVIDIA-Linux-x86_64-195.36.15-pkg2.run .
+telinit 3
+## installare il driver
+sh NVIDIA-Linux-x86_64-195.36.15-pkg2.run
+telinit 5
+
+
+##############################
+# Installazione rfiod. ShR 26/3/10: per ora solo il client
+################################
+#yum -y install castor-rfio-server 
+
+# per 64bit fare
+#yum -y install castor-rfio-server.x86_64
+yum  install castor-rfio-client
+
+#/etc/init.d/iptables restart
+#/etc/init.d/rfiod start
+
+##############
+# installazione nx (client & server)
+cd /tmp
+
+## macchine 64bit
+wget http://64.34.161.181/download/3.4.0/Linux/nxclient-3.4.0-7.x86_64.rpm
+wget http://64.34.161.181/download/3.4.0/Linux/nxnode-3.4.0-11.x86_64.rpm
+wget http://64.34.161.181/download/3.4.0/Linux/FE/nxserver-3.4.0-12.x86_64.rpm
+
+# macchine 32bit
+wget http://64.34.161.181/download/3.4.0/Linux/nxclient-3.4.0-7.i386.rpm
+wget http://64.34.161.181/download/3.4.0/Linux/nxnode-3.4.0-11.i386.rpm`
+wget http://64.34.161.181/download/3.4.0/Linux/FE/nxserver-3.4.0-12.i386.rpm
+
+# rimuovere a mano l'utente nx da /etc/passwd altrimenti l'installazione
+# fallisce
+rpm -ivh nxclient-3.4.0-7.x86_64.rpm nxnode-3.4.0-11.x86_64.rpm
+rpm -Uvh nxserver-3.4.0-12.x86_64.rpm
+# dovreste aver avuto alcuni errori dicendo che l'utente nx esiste gia`
+rpm -e nxserver-3.4.0-12
+rpm -Uvh nxserver-3.4.0-12.x86_64.rpm
+
+##############################
+## librerie di compatibilita` per 64bit
+## https://twiki.cern.ch/twiki/bin/view/LCG/SL5DependencyRPM
+##############################
+cd /etc/yum.repos.d/
+wget http://grid-deployment.web.cern.ch/grid-deployment/download/HEP/repo/HEP_OSlibs.repo
+yum -y install HEP_OSlibs_SL5
+yum -y install glibc-devel
+yum -y install zlib-devel
+
+
+
+
+###  java 1.6
+#
+cd /root
+scp pccmsrm27.cern.ch:/cmsrm/pc27/rahatlou//jre-6u19-linux-i586.rpm .
+rpm -Uvh jre-6u19-linux-i586.rpm
+
+
+## acroread
+#
+yum -y install acroread
+
+## per le macchine cin disco esterno xfs come /u2 installare XFS
+#
+yum -y install xfs-fs xfsprogs
+
+## se il disco non e` gia` stato formttato bisogna fare
+# 1) controllare che device e` assegnato al disco guardando dmesg
+#   suppondnedo che sia /dev/sdc
+/sbin/fdisk /dev/sdc
+
+# se ci sono partitizioni windows o altro rimuove tutto e 
+# creare un'unica partizione 'primary' con 'id=1' di tipo Linux
+#  dovreset vedere tipo
+
+########## begin
+Command (m for help): p
+
+Disk /dev/sdc: 1000.2 GB, 1000204886016 bytes
+255 heads, 63 sectors/track, 121601 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+
+   Device Boot      Start         End      Blocks   Id  System
+
+Command (m for help): n
+Command action
+   e   extended
+   p   primary partition (1-4)
+p
+Partition number (1-4): 1
+First cylinder (1-121601, default 1): 
+Using default value 1
+Last cylinder or +size or +sizeM or +sizeK (1-121601, default 121601): 
+Using default value 121601
+
+Command (m for help): p
+
+Disk /dev/sdc: 1000.2 GB, 1000204886016 bytes
+255 heads, 63 sectors/track, 121601 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdc1               1      121601   976760001   83  Linux
+
+Command (m for help): w
+The partition table has been altered!
+
+########## end
+
+# ora uscite da fdisk e formattate la partizione con
+#  NB: se il disco era gia` in uso NON DOVETE FORMATTARE
+#                                  SALTATE questo passaggio
+mkfs.xfs /dev/sdc1
+
+# provate che potete vedere il filesystem
+mkdir /u2
+mount -t xfs /dev/sdc1 /u2
+
+# se tutto funge allora
+umount /u2
+
+# modificate /etc/fstab per montarlo sempre aggiungendo la riga
+#
+/dev/sdc1               /u2                     xfs     defaults        1 2
+
